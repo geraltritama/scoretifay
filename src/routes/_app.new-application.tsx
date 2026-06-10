@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { Check, X } from "lucide-react";
 import { StepCard, SelectField, StepKey } from "@/components/StepCard";
-import { saveApplication, scoreField, decisionFromScore } from "@/lib/applications";
+import { saveApplication, scoreField, decisionFromScore, type Application } from "@/lib/applications";
+
 
 
 export const Route = createFileRoute("/_app/new-application")({
