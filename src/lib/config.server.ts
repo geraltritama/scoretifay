@@ -19,6 +19,6 @@ import process from "node:process";
 export function getServerConfig() {
   return {
     nodeEnv: process.env.NODE_ENV,
-    openaiApiKey: process.env.OPENAI_API_KEY,
+    googleApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   };
 }

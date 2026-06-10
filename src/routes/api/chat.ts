@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { streamText, type UIMessage, convertToModelMessages } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { SYSTEM_PROMPT, CHAT_CONFIG } from "@/lib/chat-config";
 import { checkInputForCodeRequest } from "@/lib/chat-guard.server";
 
@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env.OPENAI_API_KEY;
+        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
         if (!apiKey) {
           return new Response(JSON.stringify({ error: "AI service not configured" }), {
             status: 500,
@@ -46,9 +46,9 @@ export const Route = createFileRoute("/api/chat")({
 
         const recentMessages = messages.slice(-CHAT_CONFIG.maxMessagesInContext);
 
-        const openai = createOpenAI({ apiKey });
+        const google = createGoogleGenerativeAI({ apiKey });
         const result = streamText({
-          model: openai(CHAT_CONFIG.modelId),
+          model: google(CHAT_CONFIG.modelId),
           system: SYSTEM_PROMPT,
           messages: await convertToModelMessages(recentMessages),
         });

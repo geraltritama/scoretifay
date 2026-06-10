@@ -1,14 +1,15 @@
 import { useEffect, useState, type ComponentType } from "react";
 import { Link, Outlet } from "@tanstack/react-router";
 import {
-  Bot,
   FilePlus2,
   FolderOpen,
+  Info,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
 } from "lucide-react";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 import {
   Sheet,
   SheetClose,
@@ -74,7 +75,6 @@ export function AppLayout() {
   const navItems = [
     { to: "/new-application" as const, label: "New Application", icon: FilePlus2 },
     { to: "/my-applications" as const, label: "My Applications", icon: FolderOpen },
-    { to: "/ai-assistant" as const, label: "AI Assistant", icon: Bot },
     { to: "/settings" as const, label: "Settings", icon: Settings },
   ];
 
@@ -158,6 +158,8 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      <ChatWidget />
     </div>
   );
 }
@@ -240,7 +242,7 @@ function SidebarContent({
   collapsed = false,
 }: {
   navItems: {
-    to: "/my-applications" | "/new-application" | "/ai-assistant" | "/settings";
+    to: "/my-applications" | "/new-application" | "/settings";
     label: string;
     icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   }[];
@@ -285,18 +287,18 @@ function SidebarContent({
         <div className="mt-5 rounded-2xl border bg-secondary/50 p-4 lg:mt-6">
           <div className="mb-2 flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white">
-              <Bot className="h-3.5 w-3.5" aria-hidden={true} />
+              <Info className="h-3.5 w-3.5" aria-hidden={true} />
             </div>
             <span className="text-sm font-semibold">Need guidance?</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Ask our AI Assistant about the 5C credit scoring framework, or start a new assessment.
+            The 5C framework evaluates Character, Capacity, Capital, Condition, and Collateral.
           </p>
           <Link
             className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
-            to="/ai-assistant"
+            to="/new-application"
           >
-            Chat with AI
+            Start Assessment
           </Link>
         </div>
       )}
