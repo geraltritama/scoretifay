@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { Link, Outlet } from "@tanstack/react-router";
 import {
   FilePlus2,
@@ -20,8 +20,53 @@ import {
 } from "@/components/ui/sheet";
 import logoUrl from "../../assets/logo/logo.png";
 
+function PageLoader({ isExiting }: { isExiting: boolean }) {
+  return (
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-background ${
+        isExiting ? "animate-loader-exit pointer-events-none" : ""
+      }`}
+    >
+      <div className="flex flex-col items-center gap-5">
+        <div className="animate-loader-icon flex h-20 w-20 items-center justify-center rounded-2xl border border-border bg-background p-2 shadow-md">
+          <img src={logoUrl} alt="Scoretifay" className="h-full w-full object-contain" />
+        </div>
+        <div className="text-center">
+          <div
+            className="animate-loader-title text-sm font-bold uppercase tracking-[0.24em] text-foreground"
+            style={{ fontFamily: '"Cambria", "Georgia", serif' }}
+          >
+            Scoretifay
+          </div>
+          <div
+            className="animate-loader-tagline mt-1.5 flex items-center justify-center gap-1 text-xl font-bold text-foreground"
+            style={{ fontFamily: '"Cambria", "Georgia", serif' }}
+          >
+            <span className="text-muted-foreground">Credit</span>
+            <span>Score</span>
+            <span className="ml-1 rounded-md bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground">
+              5C
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AppLayout() {
+  const [showLoader, setShowLoader] = useState(true);
+  const [isExiting, setIsExiting] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    const exitTimer = setTimeout(() => setIsExiting(true), 850);
+    const removeTimer = setTimeout(() => setShowLoader(false), 1250);
+    return () => {
+      clearTimeout(exitTimer);
+      clearTimeout(removeTimer);
+    };
+  }, []);
   const sideNavClassName = isSidebarCollapsed
     ? "flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
     : "flex min-w-fit items-center gap-2 rounded-xl px-3 py-2.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground";
@@ -34,6 +79,7 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-muted/40">
+      {showLoader && <PageLoader isExiting={isExiting} />}
       <div className="flex flex-col lg:flex-row">
         <div className="border-b bg-background/95 p-4 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between gap-4">
@@ -107,7 +153,7 @@ export function AppLayout() {
         </aside>
 
         {/* Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="animate-content-reveal flex-1 p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

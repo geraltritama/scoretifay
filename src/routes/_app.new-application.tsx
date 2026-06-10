@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
 import { StepCard, SelectField, StepKey } from "@/components/StepCard";
 import { useDialogFocusTrap } from "@/hooks/use-dialog-focus-trap";
@@ -71,6 +71,9 @@ const FIELDS = Object.fromEntries(
 function NewApplication() {
   const navigate = useNavigate();
   const [step, setStep] = useState<StepKey>("character");
+  const [stepDirection, setStepDirection] = useState<"forward" | "backward" | "initial">(
+    "initial",
+  );
   const [values, setValues] = useState<Record<string, string>>({});
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [totalPengajuan, setTotalPengajuan] = useState("");
@@ -94,8 +97,9 @@ function NewApplication() {
     setMissingFields([]);
 
     if (currentIndex < STEP_ORDER.length - 1) {
+      setStepDirection("forward");
       setStep(STEP_ORDER[currentIndex + 1]);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "instant" });
       return;
     }
 
@@ -139,14 +143,16 @@ function NewApplication() {
     if (currentIndex === 0) return;
     setMissingFields([]);
     setSubmitError("");
+    setStepDirection("backward");
     setStep(STEP_ORDER[currentIndex - 1]);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
 
   return (
     <>
       <StepCard
         current={step}
+        direction={stepDirection}
         title={config.title}
         subtitle={config.subtitle}
         onSubmit={handleSubmit}
@@ -198,6 +204,7 @@ function NewApplication() {
             setMissingFields([]);
             setTotalPengajuan("");
             setSubmitError("");
+            setStepDirection("initial");
             setStep("character");
           }}
         />
@@ -220,6 +227,26 @@ function formatRupiah(value: number) {
   }).format(value);
 }
 
+function useCountUp(target: number, duration = 900) {
+  const [count, setCount] = useState(0);
+  const rafRef = useRef<number>(0);
+  useEffect(() => {
+    const startTime = performance.now();
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(eased * target));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      }
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, duration]);
+  return count;
+}
+
 function ResultModal({
   app,
   onViewAll,
@@ -235,15 +262,17 @@ function ResultModal({
   const kelayakan =
     app.kelayakanKredit ?? hitungKelayakanKredit(app.totalScore, app.totalPengajuan ?? 0);
   const style = DECISION_STYLE[kelayakan.hasilKeputusanPengajuanKredit];
+  const displayScore = useCountUp(kelayakan.totalSkor, 900);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="animate-backdrop-fade fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="assessment-result-title"
         tabIndex={-1}
-        className="scrollbar-hidden max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-card p-6 shadow-2xl"
+        className="animate-modal-enter scrollbar-hidden max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-card p-6 shadow-2xl"
       >
         <div className="mb-5 flex items-start justify-between">
           <h2 id="assessment-result-title" className="text-2xl font-bold">
@@ -259,10 +288,11 @@ function ResultModal({
           </button>
         </div>
 
-        <div className="mb-4 rounded-lg border bg-secondary/50 p-4 text-center">
+        {/* Score block with reveal + count-up */}
+        <div className="animate-score-reveal mb-4 rounded-lg border bg-secondary/50 p-4 text-center">
           <div className="text-sm text-muted-foreground">Total Skor</div>
           <div className="mt-1 text-4xl font-bold">
-            {kelayakan.totalSkor}
+            {displayScore}
             <span className="text-lg font-medium text-muted-foreground"> / 154</span>
           </div>
           <div className="mt-2 text-sm font-semibold text-muted-foreground">
@@ -270,7 +300,10 @@ function ResultModal({
           </div>
         </div>
 
-        <div className={`mb-5 flex items-center gap-3 rounded-lg px-4 py-3 text-white ${style.bg}`}>
+        {/* Decision banner with delayed slide-up reveal */}
+        <div
+          className={`animate-decision-reveal mb-5 flex items-center gap-3 rounded-lg px-4 py-3 text-white ${style.bg}`}
+        >
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
             <Check className="h-5 w-5" aria-hidden="true" />
           </div>
