@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { StepCard, SelectField, StepKey } from "@/components/StepCard";
+import { saveApplication, scoreField, decisionFromScore } from "@/lib/applications";
+
 
 export const Route = createFileRoute("/_app/new-application")({
   head: () => ({ meta: [{ title: "New Application — CreditScore5C" }] }),
