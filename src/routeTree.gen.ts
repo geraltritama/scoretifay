@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppNewApplicationRouteImport } from './routes/_app.new-application'
 import { Route as AppMyApplicationsRouteImport } from './routes/_app.my-applications'
+import { Route as AppAiAssistantRouteImport } from './routes/_app.ai-assistant'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -22,6 +24,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -39,44 +46,70 @@ const AppMyApplicationsRoute = AppMyApplicationsRouteImport.update({
   path: '/my-applications',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAiAssistantRoute = AppAiAssistantRouteImport.update({
+  id: '/ai-assistant',
+  path: '/ai-assistant',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-assistant': typeof AppAiAssistantRoute
   '/my-applications': typeof AppMyApplicationsRoute
   '/new-application': typeof AppNewApplicationRoute
   '/settings': typeof AppSettingsRoute
+  '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-assistant': typeof AppAiAssistantRoute
   '/my-applications': typeof AppMyApplicationsRoute
   '/new-application': typeof AppNewApplicationRoute
   '/settings': typeof AppSettingsRoute
+  '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/ai-assistant': typeof AppAiAssistantRoute
   '/_app/my-applications': typeof AppMyApplicationsRoute
   '/_app/new-application': typeof AppNewApplicationRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/api/chat': typeof ApiChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/my-applications' | '/new-application' | '/settings'
+  fullPaths:
+    | '/'
+    | '/ai-assistant'
+    | '/my-applications'
+    | '/new-application'
+    | '/settings'
+    | '/api/chat'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/my-applications' | '/new-application' | '/settings'
+  to:
+    | '/'
+    | '/ai-assistant'
+    | '/my-applications'
+    | '/new-application'
+    | '/settings'
+    | '/api/chat'
   id:
     | '__root__'
     | '/'
     | '/_app'
+    | '/_app/ai-assistant'
     | '/_app/my-applications'
     | '/_app/new-application'
     | '/_app/settings'
+    | '/api/chat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  ApiChatRoute: typeof ApiChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -93,6 +126,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/settings': {
@@ -116,16 +156,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMyApplicationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/ai-assistant': {
+      id: '/_app/ai-assistant'
+      path: '/ai-assistant'
+      fullPath: '/ai-assistant'
+      preLoaderRoute: typeof AppAiAssistantRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAiAssistantRoute: typeof AppAiAssistantRoute
   AppMyApplicationsRoute: typeof AppMyApplicationsRoute
   AppNewApplicationRoute: typeof AppNewApplicationRoute
   AppSettingsRoute: typeof AppSettingsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAiAssistantRoute: AppAiAssistantRoute,
   AppMyApplicationsRoute: AppMyApplicationsRoute,
   AppNewApplicationRoute: AppNewApplicationRoute,
   AppSettingsRoute: AppSettingsRoute,
@@ -136,6 +185,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  ApiChatRoute: ApiChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

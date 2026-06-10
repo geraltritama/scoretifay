@@ -1,9 +1,9 @@
 import { useEffect, useState, type ComponentType } from "react";
 import { Link, Outlet } from "@tanstack/react-router";
 import {
+  Bot,
   FilePlus2,
   FolderOpen,
-  Info,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -74,6 +74,7 @@ export function AppLayout() {
   const navItems = [
     { to: "/new-application" as const, label: "New Application", icon: FilePlus2 },
     { to: "/my-applications" as const, label: "My Applications", icon: FolderOpen },
+    { to: "/ai-assistant" as const, label: "AI Assistant", icon: Bot },
     { to: "/settings" as const, label: "Settings", icon: Settings },
   ];
 
@@ -91,7 +92,7 @@ export function AppLayout() {
                   className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-background text-foreground shadow-sm transition-colors hover:bg-secondary"
                   aria-label="Open navigation menu"
                 >
-                  <Menu className="h-5 w-5" aria-hidden="true" />
+                  <Menu className="h-5 w-5" aria-hidden={true} />
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[min(88vw,22rem)] p-0">
@@ -140,7 +141,7 @@ export function AppLayout() {
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
               >
-                <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+                <PanelLeftClose className="h-4 w-4" aria-hidden={true} />
               </button>
             )}
           </div>
@@ -192,7 +193,7 @@ function BrandBlock({
           aria-label="Expand sidebar"
           title="Expand sidebar"
         >
-          <PanelLeftOpen className="h-3.5 w-3.5" aria-hidden="true" />
+          <PanelLeftOpen className="h-3.5 w-3.5" aria-hidden={true} />
         </button>
       </div>
     );
@@ -239,7 +240,7 @@ function SidebarContent({
   collapsed = false,
 }: {
   navItems: {
-    to: "/my-applications" | "/new-application" | "/settings";
+    to: "/my-applications" | "/new-application" | "/ai-assistant" | "/settings";
     label: string;
     icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   }[];
@@ -265,7 +266,7 @@ function SidebarContent({
               title={collapsed ? label : undefined}
               aria-label={collapsed ? label : undefined}
             >
-              <Icon className="h-4 w-4" aria-hidden="true" />
+              <Icon className="h-4 w-4" aria-hidden={true} />
               {!collapsed && label}
             </Link>
           );
@@ -284,18 +285,18 @@ function SidebarContent({
         <div className="mt-5 rounded-2xl border bg-secondary/50 p-4 lg:mt-6">
           <div className="mb-2 flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white">
-              <Info className="h-3.5 w-3.5" aria-hidden="true" />
+              <Bot className="h-3.5 w-3.5" aria-hidden={true} />
             </div>
             <span className="text-sm font-semibold">Need guidance?</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            The 5C framework evaluates Character, Capacity, Capital, Condition, and Collateral.
+            Ask our AI Assistant about the 5C credit scoring framework, or start a new assessment.
           </p>
           <Link
             className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
-            to="/new-application"
+            to="/ai-assistant"
           >
-            Start Assessment
+            Chat with AI
           </Link>
         </div>
       )}
