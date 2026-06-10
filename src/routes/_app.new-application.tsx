@@ -1,119 +1,146 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Check, X } from "lucide-react";
 import { StepCard, SelectField, StepKey } from "@/components/StepCard";
-import { saveApplication, scoreField, decisionFromScore, type Application } from "@/lib/applications";
-
-
+import { useDialogFocusTrap } from "@/hooks/use-dialog-focus-trap";
+import { useLockBodyScroll } from "@/hooks/use-lock-body-scroll";
+import {
+  SCORING_RUBRIC,
+  getFieldScoreBreakdown,
+  getApplicationStepScore,
+  getStepMaxScore,
+  hitungKelayakanKredit,
+  saveApplication,
+  validateApplicationScores,
+  validateTotalPengajuan,
+  type Application,
+  type CreditDecision,
+} from "@/lib/applications";
 
 export const Route = createFileRoute("/_app/new-application")({
-  head: () => ({ meta: [{ title: "New Application — CreditScore5C" }] }),
+  head: () => ({ meta: [{ title: "Scoretifay — New Application" }] }),
   component: NewApplication,
 });
 
 const STEP_ORDER: StepKey[] = ["character", "capacity", "capital", "condition", "collateral"];
 
-const FIELDS: Record<StepKey, { title: string; subtitle: string; fields: { label: string; placeholder: string; options: string[] }[] }> = {
+const STEP_CONTENT: Record<StepKey, { title: string; subtitle: string }> = {
   character: {
     title: "Character",
     subtitle: "Your credit reputation and repayment track record.",
-    fields: [
-      { label: "Usia", placeholder: "Pilih Rentang Usia", options: ["< 25", "25-35", "36-45", "46-55", "> 55"] },
-      { label: "Pendidikan Terakhir", placeholder: "Pilih Pendidikan Terakhir", options: ["SMA", "Diploma", "S1", "S2", "S3"] },
-      { label: "Jenis Kelamin", placeholder: "Pilih Jenis Kelamin", options: ["Laki-laki", "Perempuan"] },
-      { label: "Status", placeholder: "Pilih Status", options: ["Belum Menikah", "Menikah", "Cerai"] },
-      { label: "Pekerjaan", placeholder: "Pilih Pekerjaan", options: ["Karyawan Swasta", "PNS", "Wiraswasta", "Profesional"] },
-      { label: "Lama Bekerja pada Bidang Pekerjaan", placeholder: "Pilih Lama Bekerja", options: ["< 1 tahun", "1-3 tahun", "3-5 tahun", "> 5 tahun"] },
-      { label: "Jabatan Pekerjaan", placeholder: "Pilih Jabatan Pekerjaan", options: ["Staff", "Supervisor", "Manager", "Direktur"] },
-      { label: "Jumlah Tanggungan", placeholder: "Pilih Jumlah Tanggungan", options: ["0", "1", "2", "3", "4+"] },
-      { label: "Kepemilikan Kartu Debit", placeholder: "Pilih Kepemilikan Kartu Debit", options: ["Ya", "Tidak"] },
-    ],
   },
   capacity: {
     title: "Capacity",
     subtitle: "Your ability to repay based on income and obligations.",
-    fields: [
-      { label: "Penghasilan Perbulan", placeholder: "Pilih Penghasilan", options: ["< 5 juta", "5-10 juta", "10-25 juta", "> 25 juta"] },
-      { label: "Pengeluaran Perbulan", placeholder: "Pilih Pengeluaran", options: ["< 3 juta", "3-7 juta", "7-15 juta", "> 15 juta"] },
-      { label: "Penghasilan Pasangan Perbulan", placeholder: "Pilih Penghasilan Pasangan", options: ["Tidak ada", "< 5 juta", "5-10 juta", "> 10 juta"] },
-      { label: "Jumlah Pinjaman Aktif", placeholder: "Pilih Jumlah Pinjaman", options: ["0", "1", "2", "3+"] },
-      { label: "Jumlah Pinjaman Aktif (Rp)", placeholder: "Pilih Jumlah Pinjaman (Rp)", options: ["< 10 juta", "10-50 juta", "50-100 juta", "> 100 juta"] },
-      { label: "Jumlah Pinjaman yang Menunggak", placeholder: "Pilih Jumlah Pinjaman Menunggak", options: ["0", "1", "2+"] },
-      { label: "Jumlah Waktu Pinjaman Aktif Terlama", placeholder: "Pilih Jumlah Pinjaman Aktif Terlama", options: ["< 1 tahun", "1-3 tahun", "> 3 tahun"] },
-    ],
   },
   capital: {
     title: "Capital",
     subtitle: "Your savings, investments, and net financial position.",
-    fields: [
-      { label: "Kepemilikan Investasi Aset Lancar", placeholder: "Pilih Kepemilikan Investasi", options: ["Ya", "Tidak"] },
-      { label: "Kepemilikan Bisnis", placeholder: "Pilih Kepemilikan Bisnis", options: ["Ya", "Tidak"] },
-      { label: "Total Nilai Kepemilikan Seluruh Aset", placeholder: "Pilih Total Kepemilikan Seluruh Aset", options: ["< 100 juta", "100-500 juta", "500 juta - 1 M", "> 1 M"] },
-      { label: "Umur Bisnis", placeholder: "Pilih Umur Bisnis", options: ["Tidak ada", "< 1 tahun", "1-5 tahun", "> 5 tahun"] },
-      { label: "Tabungan (Jangka Waktu)", placeholder: "Pilih Jangka Waktu Tabungan", options: ["< 1 tahun", "1-3 tahun", "> 3 tahun"] },
-    ],
   },
   condition: {
     title: "Condition",
     subtitle: "The purpose, amount, and terms of the requested loan.",
-    fields: [
-      { label: "Kondisi Keuangan 6 Bulan Terakhir", placeholder: "Pilih Kondisi Keuangan", options: ["Stabil", "Meningkat", "Menurun"] },
-      { label: "Pengaruh Makro Ekonomi Terhadap Pendapatan", placeholder: "Pilih Pengaruh Makro Ekonomi", options: ["Tidak ada", "Sedikit", "Sedang", "Besar"] },
-      { label: "Posisi Perusahaan", placeholder: "Pilih Posisi Perusahaan", options: ["Berkembang", "Stabil", "Menurun"] },
-      { label: "Harga Produk Usaha", placeholder: "Pilih Harga Produk Usaha", options: ["Murah", "Sedang", "Mahal"] },
-    ],
   },
   collateral: {
     title: "Collateral",
     subtitle: "Assets pledged to secure the loan.",
-    fields: [
-      { label: "Kepemilikan SK", placeholder: "Pilih Kepemilikan SK", options: ["Ya", "Tidak"] },
-      { label: "Kepemilikan Aset Tidak Lancar", placeholder: "Pilih Kepemilikan Aset Tidak Lancar", options: ["Ya", "Tidak"] },
-      { label: "Lama Kepemilikan Aset", placeholder: "Pilih Lama Kepemilikan Aset", options: ["< 1 tahun", "1-5 tahun", "> 5 tahun"] },
-      { label: "Pihak Lain Sebagai Penjamin", placeholder: "Pilih Pihak Lain Sebagai Penjamin", options: ["Ada", "Tidak ada"] },
-      { label: "Status Kepemilikan SK", placeholder: "Pilih Status Kepemilikan SK", options: ["Pribadi", "Bersama"] },
-      { label: "Status Kepemilikan Tempat Tinggal", placeholder: "Pilih Status Kepemilikan Tempat Tinggal", options: ["Milik Sendiri", "Sewa", "Milik Keluarga"] },
-    ],
   },
 };
+
+const FIELDS = Object.fromEntries(
+  STEP_ORDER.map((step) => [
+    step,
+    {
+      ...STEP_CONTENT[step],
+      fields: Object.entries(SCORING_RUBRIC[step]).map(([label, options]) => ({
+        label,
+        placeholder: `Pilih ${label}…`,
+        options: options.map((option) => option.label),
+      })),
+    },
+  ]),
+) as Record<
+  StepKey,
+  {
+    title: string;
+    subtitle: string;
+    fields: { label: string; placeholder: string; options: string[] }[];
+  }
+>;
 
 function NewApplication() {
   const navigate = useNavigate();
   const [step, setStep] = useState<StepKey>("character");
   const [values, setValues] = useState<Record<string, string>>({});
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [totalPengajuan, setTotalPengajuan] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [result, setResult] = useState<Application | null>(null);
 
   const config = FIELDS[step];
+  const currentIndex = STEP_ORDER.indexOf(step);
 
   const handleSubmit = () => {
-    const idx = STEP_ORDER.indexOf(step);
-    if (idx < STEP_ORDER.length - 1) {
-      setStep(STEP_ORDER[idx + 1]);
+    const missing = config.fields
+      .filter((field) => !values[field.label])
+      .map((field) => field.label);
+
+    if (missing.length > 0) {
+      setMissingFields(missing);
+      setSubmitError("");
+      return;
+    }
+
+    setMissingFields([]);
+
+    if (currentIndex < STEP_ORDER.length - 1) {
+      setStep(STEP_ORDER[currentIndex + 1]);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
-    const scores = {} as Record<StepKey, number>;
-    for (const key of STEP_ORDER) {
-      const stepFields = FIELDS[key].fields;
-      const perField = stepFields.map((f) => scoreField(values[f.label] ?? "", f.options));
-      const avg = perField.reduce((a, b) => a + b, 0) / perField.length;
-      scores[key] = Math.round(avg);
+    const totalPengajuanValidation = validateTotalPengajuan(totalPengajuan);
+    if (!totalPengajuanValidation.valid) {
+      setSubmitError(totalPengajuanValidation.error ?? "Total pengajuan tidak valid.");
+      return;
     }
-    const totalScore = Math.round(
-      STEP_ORDER.reduce((sum, k) => sum + scores[k], 0) / STEP_ORDER.length,
-    );
+    const totalPengajuanValue = totalPengajuanValidation.value;
+
+    const scoreValidation = validateApplicationScores(values);
+    if (scoreValidation.errors.length > 0) {
+      setSubmitError(scoreValidation.errors[0].message);
+      return;
+    }
+
+    const { scores, totalSkor } = scoreValidation;
+    const kelayakanKredit = hitungKelayakanKredit(totalSkor, totalPengajuanValue);
+
+    if (kelayakanKredit.error) {
+      setSubmitError(kelayakanKredit.error);
+      return;
+    }
 
     const app: Application = {
       id: `APP-${Date.now()}`,
       submittedAt: new Date().toISOString(),
       values,
       scores,
-      totalScore,
-      decision: decisionFromScore(totalScore),
+      totalSkor,
+      totalScore: totalSkor,
+      totalPengajuan: totalPengajuanValue,
+      kelayakanKredit,
+      decision: kelayakanKredit.hasilKeputusanPengajuanKredit,
     };
     saveApplication(app);
     setResult(app);
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex === 0) return;
+    setMissingFields([]);
+    setSubmitError("");
+    setStep(STEP_ORDER[currentIndex - 1]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -123,7 +150,27 @@ function NewApplication() {
         title={config.title}
         subtitle={config.subtitle}
         onSubmit={handleSubmit}
+        onPrevious={handlePrevious}
+        canGoPrevious={currentIndex > 0}
+        submitLabel={currentIndex === STEP_ORDER.length - 1 ? "Submit" : "Next"}
+        formError={
+          missingFields.length > 0
+            ? "Lengkapi semua field pada step ini sebelum melanjutkan."
+            : submitError
+              ? submitError
+              : undefined
+        }
       >
+        {currentIndex === STEP_ORDER.length - 1 && (
+          <LoanAmountField
+            value={totalPengajuan}
+            error={submitError.includes("pengajuan") ? submitError : undefined}
+            onChange={(value) => {
+              setTotalPengajuan(value);
+              setSubmitError("");
+            }}
+          />
+        )}
         {config.fields.map((f) => (
           <SelectField
             key={f.label}
@@ -131,7 +178,12 @@ function NewApplication() {
             placeholder={f.placeholder}
             options={f.options}
             value={values[f.label] ?? ""}
-            onChange={(v) => setValues((s) => ({ ...s, [f.label]: v }))}
+            error={missingFields.includes(f.label) ? `${f.label} wajib diisi.` : undefined}
+            onChange={(v) => {
+              setValues((s) => ({ ...s, [f.label]: v }));
+              setMissingFields((fields) => fields.filter((field) => field !== f.label));
+              setSubmitError("");
+            }}
           />
         ))}
       </StepCard>
@@ -143,6 +195,9 @@ function NewApplication() {
           onClose={() => {
             setResult(null);
             setValues({});
+            setMissingFields([]);
+            setTotalPengajuan("");
+            setSubmitError("");
             setStep("character");
           }}
         />
@@ -151,11 +206,19 @@ function NewApplication() {
   );
 }
 
-const DECISION_STYLE: Record<Application["decision"], { bg: string; label: string }> = {
-  Approved: { bg: "bg-emerald-600", label: "Approved" },
-  Review: { bg: "bg-amber-500", label: "Needs Review" },
-  Rejected: { bg: "bg-red-600", label: "Rejected" },
+const DECISION_STYLE: Record<CreditDecision, { bg: string; label: string }> = {
+  ACCEPT: { bg: "bg-emerald-600", label: "ACCEPT" },
+  REJECT: { bg: "bg-red-600", label: "PINJAMAN DITOLAK" },
+  INVALID: { bg: "bg-amber-500", label: "INVALID" },
 };
+
+function formatRupiah(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 function ResultModal({
   app,
@@ -166,30 +229,69 @@ function ResultModal({
   onViewAll: () => void;
   onClose: () => void;
 }) {
-  const style = DECISION_STYLE[app.decision];
+  useLockBodyScroll();
+  const dialogRef = useDialogFocusTrap(onClose);
+
+  const kelayakan =
+    app.kelayakanKredit ?? hitungKelayakanKredit(app.totalScore, app.totalPengajuan ?? 0);
+  const style = DECISION_STYLE[kelayakan.hasilKeputusanPengajuanKredit];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-2xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="assessment-result-title"
+        tabIndex={-1}
+        className="scrollbar-hidden max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-card p-6 shadow-2xl"
+      >
         <div className="mb-5 flex items-start justify-between">
-          <h2 className="text-2xl font-bold">Your Assessment Result</h2>
-          <button onClick={onClose} className="rounded-md p-1 hover:bg-secondary">
-            <X className="h-5 w-5" />
+          <h2 id="assessment-result-title" className="text-2xl font-bold">
+            Your Assessment Result
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 hover:bg-secondary"
+            aria-label="Close assessment result"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
         <div className="mb-4 rounded-lg border bg-secondary/50 p-4 text-center">
-          <div className="text-sm text-muted-foreground">Total Credit Score</div>
+          <div className="text-sm text-muted-foreground">Total Skor</div>
           <div className="mt-1 text-4xl font-bold">
-            {app.totalScore}
-            <span className="text-lg font-medium text-muted-foreground"> / 100</span>
+            {kelayakan.totalSkor}
+            <span className="text-lg font-medium text-muted-foreground"> / 154</span>
+          </div>
+          <div className="mt-2 text-sm font-semibold text-muted-foreground">
+            {kelayakan.keteranganSkor}
           </div>
         </div>
 
         <div className={`mb-5 flex items-center gap-3 rounded-lg px-4 py-3 text-white ${style.bg}`}>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
-            <Check className="h-5 w-5" />
+            <Check className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="font-semibold">{style.label}</div>
+        </div>
+
+        <div className="mb-6 grid gap-3 rounded-lg border bg-background p-4 text-sm sm:grid-cols-2">
+          <div>
+            <div className="text-muted-foreground">Total Pengajuan</div>
+            <div className="font-semibold">{formatRupiah(kelayakan.totalPengajuan)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Proporsi Pinjaman Di-ACC</div>
+            <div className="font-semibold">
+              {Math.round(kelayakan.proporsiPinjamanYangDiAcc * 100)}%
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <div className="text-muted-foreground">Pinjaman Yang Diperoleh</div>
+            <div className="text-lg font-bold">{formatRupiah(kelayakan.pinjamanYangDiperoleh)}</div>
+          </div>
         </div>
 
         <div className="mb-6 rounded-lg border bg-secondary/40 p-4">
@@ -198,7 +300,37 @@ function ResultModal({
             {STEP_ORDER.map((k) => (
               <div key={k} className="flex items-center justify-between">
                 <span className="capitalize text-muted-foreground">{k}</span>
-                <span className="font-semibold">{app.scores[k]} / 100</span>
+                <span className="font-semibold">
+                  {getApplicationStepScore(app, k)} / {getStepMaxScore(k)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-6 rounded-lg border bg-background p-4">
+          <h3 className="mb-3 font-semibold">Field Score Details</h3>
+          <div className="space-y-4">
+            {STEP_ORDER.map((stepKey) => (
+              <div key={stepKey}>
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="text-sm font-semibold">{STEP_CONTENT[stepKey].title}</h4>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {getApplicationStepScore(app, stepKey)} / {getStepMaxScore(stepKey)}
+                  </span>
+                </div>
+                <div className="divide-y rounded-lg border text-sm">
+                  {getFieldScoreBreakdown(stepKey, app.values).map((field) => (
+                    <div
+                      key={field.fieldLabel}
+                      className="grid gap-1 px-3 py-2 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center"
+                    >
+                      <span className="font-medium">{field.fieldLabel}</span>
+                      <span className="text-muted-foreground">{field.value}</span>
+                      <span className="font-semibold">{field.score}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -206,12 +338,14 @@ function ResultModal({
 
         <div className="grid grid-cols-2 gap-3">
           <button
+            type="button"
             onClick={onViewAll}
             className="rounded-md border border-input bg-background px-4 py-2.5 text-sm font-semibold hover:bg-secondary"
           >
             View My Applications
           </button>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
@@ -223,3 +357,44 @@ function ResultModal({
   );
 }
 
+function LoanAmountField({
+  value,
+  error,
+  onChange,
+}: {
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}) {
+  const fieldId = useId();
+  const errorId = `${fieldId}-error`;
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor={fieldId} className="block text-sm font-semibold">
+        Total Pengajuan
+      </label>
+      <input
+        id={fieldId}
+        name="totalPengajuan"
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Contoh: 250000"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
+        className={`w-full rounded-xl border bg-secondary/60 px-3.5 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${
+          error ? "border-destructive" : "border-input"
+        }`}
+      />
+      {error && (
+        <p id={errorId} className="text-xs font-medium text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
