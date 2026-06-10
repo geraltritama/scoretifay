@@ -7,6 +7,14 @@ import { ChatInput } from "./ChatInput";
 const WELCOME_TEXT =
   "Halo! Saya Scoretifay Assistant. Saya bisa membantu kamu memahami framework 5C, cara menggunakan Scoretifay, dan panduan kredit. Ada pertanyaan?";
 
+const SUGGESTED_QUESTIONS = [
+  "Apa itu framework 5C?",
+  "Bagaimana cara menghitung skor Character?",
+  "Apa yang dimaksud Capacity dalam kredit?",
+  "Berapa skor minimum untuk disetujui?",
+  "Bagaimana cara menggunakan Scoretifay?",
+];
+
 const FAB_SIZE = 56;
 
 interface DragState {
@@ -139,6 +147,23 @@ export function ChatWidget() {
                   {WELCOME_TEXT}
                 </div>
               </div>
+
+              {/* Suggested questions — hidden once conversation starts */}
+              {messages.length === 0 && (
+                <div className="flex flex-wrap gap-1.5 pl-9">
+                  {SUGGESTED_QUESTIONS.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => handleSend(q)}
+                      disabled={isLoading}
+                      className="rounded-xl border border-border bg-background px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:border-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {messages.map((message) => (
                 <ChatMessage key={message.id} message={message} compact />
