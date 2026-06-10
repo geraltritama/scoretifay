@@ -151,15 +151,13 @@ export function ChatWidget() {
     sendMessage({ text });
   };
 
-  // Panel positioning: flip horizontal when near left edge
-  const fabX = pos?.x ?? window.innerWidth - FAB_SIZE - 24;
-  const panelAlignRight = fabX + FAB_SIZE >= PANEL_WIDTH;
+  // Panel positioning — computed client-side only (window not available during SSR)
+  const isBrowser = typeof window !== "undefined";
+  const fabX = pos?.x ?? (isBrowser ? window.innerWidth - FAB_SIZE - 24 : 9999);
+  const fabY = pos?.y ?? (isBrowser ? window.innerHeight - FAB_SIZE - 24 : 9999);
+  const panelAlignRight = !isBrowser || fabX + FAB_SIZE >= PANEL_WIDTH;
   const panelHorizontal = panelAlignRight ? "right-0" : "left-0";
-
-  // Panel height: limit if FAB is near top of screen
-  const fabY = pos?.y ?? window.innerHeight - FAB_SIZE - 24;
-  const spaceAbove = fabY - 12;
-  const panelHeight = Math.min(520, Math.max(300, spaceAbove));
+  const panelHeight = isBrowser ? Math.min(520, Math.max(300, fabY - 12)) : 520;
 
   return (
     <div
