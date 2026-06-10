@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppNewApplicationRouteImport } from './routes/_app.new-application'
+import { Route as AppMyApplicationsRouteImport } from './routes/_app.my-applications'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -27,27 +28,40 @@ const AppNewApplicationRoute = AppNewApplicationRouteImport.update({
   path: '/new-application',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMyApplicationsRoute = AppMyApplicationsRouteImport.update({
+  id: '/my-applications',
+  path: '/my-applications',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/my-applications': typeof AppMyApplicationsRoute
   '/new-application': typeof AppNewApplicationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/my-applications': typeof AppMyApplicationsRoute
   '/new-application': typeof AppNewApplicationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/my-applications': typeof AppMyApplicationsRoute
   '/_app/new-application': typeof AppNewApplicationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/new-application'
+  fullPaths: '/' | '/my-applications' | '/new-application'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/new-application'
-  id: '__root__' | '/' | '/_app' | '/_app/new-application'
+  to: '/' | '/my-applications' | '/new-application'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/_app/my-applications'
+    | '/_app/new-application'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,14 +92,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNewApplicationRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/my-applications': {
+      id: '/_app/my-applications'
+      path: '/my-applications'
+      fullPath: '/my-applications'
+      preLoaderRoute: typeof AppMyApplicationsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppMyApplicationsRoute: typeof AppMyApplicationsRoute
   AppNewApplicationRoute: typeof AppNewApplicationRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppMyApplicationsRoute: AppMyApplicationsRoute,
   AppNewApplicationRoute: AppNewApplicationRoute,
 }
 
