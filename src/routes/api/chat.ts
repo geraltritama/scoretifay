@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { streamText, type UIMessage, convertToModelMessages } from "ai";
+import {
+  streamText,
+  type UIMessage,
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+} from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { SYSTEM_PROMPT, CHAT_CONFIG } from "@/lib/chat-config";
 import { checkInputForCodeRequest } from "@/lib/chat-guard.server";
@@ -28,19 +34,15 @@ export const Route = createFileRoute("/api/chat")({
 
           const guard = checkInputForCodeRequest(userText);
           if (guard.blocked) {
-            const encoder = new TextEncoder();
-            const stream = new ReadableStream({
-              start(controller) {
-                controller.enqueue(encoder.encode(`0:${JSON.stringify(guard.refusalMessage)}\n`));
-                controller.close();
+            const refusalText = guard.refusalMessage!;
+            const stream = createUIMessageStream({
+              execute: ({ writer }) => {
+                writer.write({ type: "text-start", id: "refusal" });
+                writer.write({ type: "text-delta", id: "refusal", delta: refusalText });
+                writer.write({ type: "text-end", id: "refusal" });
               },
             });
-            return new Response(stream, {
-              headers: {
-                "Content-Type": "text/plain; charset=utf-8",
-                "X-Vercel-AI-Data-Stream": "v1",
-              },
-            });
+            return createUIMessageStreamResponse({ stream });
           }
         }
 
