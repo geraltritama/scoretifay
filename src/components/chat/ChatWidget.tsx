@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
-import { Bot, X } from "lucide-react";
+import type { UIMessage } from "ai";
+import { Bot, ChevronDown, RefreshCw, Trash2, X } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 
@@ -16,6 +17,8 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 const FAB_SIZE = 56;
+const PANEL_WIDTH = 360;
+const STORAGE_KEY = "scoretifay-chat-messages";
 
 interface DragState {
   startX: number;
@@ -25,21 +28,70 @@ interface DragState {
   moved: boolean;
 }
 
+function loadStoredMessages(): UIMessage[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as UIMessage[];
+  } catch {}
+  return [];
+}
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const { messages, sendMessage, status } = useChat();
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [initialMessages] = useState<UIMessage[]>(loadStoredMessages);
+
+  const { messages, sendMessage, status, setMessages, clearError, regenerate } = useChat({
+    messages: initialMessages,
+  });
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const isLoading = status === "submitted" || status === "streaming";
   const hasError = status === "error";
 
+  // Persist messages to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch {}
+  }, [messages]);
+
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  // Track scroll position for scroll-to-bottom button
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollBtn(distFromBottom > 60);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    setShowScrollBtn(false);
+  }, []);
+
+  const clearConversation = useCallback(() => {
+    setMessages([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+  }, [setMessages]);
+
+  const handleRetry = useCallback(() => {
+    clearError();
+    regenerate();
+  }, [clearError, regenerate]);
+
+  // Drag logic
   const getContainerPos = useCallback((): { x: number; y: number } => {
     if (pos) return pos;
     const el = containerRef.current;
@@ -99,15 +151,28 @@ export function ChatWidget() {
     sendMessage({ text });
   };
 
+  // Panel positioning: flip horizontal when near left edge
+  const fabX = pos?.x ?? window.innerWidth - FAB_SIZE - 24;
+  const panelAlignRight = fabX + FAB_SIZE >= PANEL_WIDTH;
+  const panelHorizontal = panelAlignRight ? "right-0" : "left-0";
+
+  // Panel height: limit if FAB is near top of screen
+  const fabY = pos?.y ?? window.innerHeight - FAB_SIZE - 24;
+  const spaceAbove = fabY - 12;
+  const panelHeight = Math.min(520, Math.max(300, spaceAbove));
+
   return (
     <div
       ref={containerRef}
       className={`fixed z-50 ${pos ? "" : "bottom-6 right-6"}`}
       style={pos ? { left: pos.x, top: pos.y } : undefined}
     >
-      {/* Chat panel - positioned above FAB */}
+      {/* Chat panel */}
       {isOpen && (
-        <div className="absolute bottom-[calc(100%+12px)] right-0 flex h-[520px] w-[360px] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl">
+        <div
+          className={`absolute bottom-[calc(100%+12px)] ${panelHorizontal} flex w-[360px] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl`}
+          style={{ height: panelHeight }}
+        >
           {/* Draggable header */}
           <div
             className="flex cursor-grab select-none items-center justify-between gap-3 border-b bg-background px-4 py-3 active:cursor-grabbing"
@@ -124,19 +189,37 @@ export function ChatWidget() {
                 <div className="text-xs text-muted-foreground">Panduan kredit 5C</div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              aria-label="Tutup chat"
-            >
-              <X className="h-4 w-4" aria-hidden={true} />
-            </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearConversation}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  aria-label="Hapus percakapan"
+                  title="Hapus percakapan"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden={true} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                aria-label="Tutup chat"
+              >
+                <X className="h-4 w-4" aria-hidden={true} />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
+          <div
+            ref={scrollRef}
+            className="relative flex-1 overflow-y-auto px-4 py-3"
+            onScroll={handleScroll}
+          >
             <div className="flex flex-col gap-3">
               {/* Welcome message */}
               <div className="flex gap-2.5">
@@ -186,9 +269,31 @@ export function ChatWidget() {
             </div>
           </div>
 
+          {/* Scroll-to-bottom button */}
+          {showScrollBtn && (
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              className="absolute bottom-16 right-4 flex h-7 w-7 items-center justify-center rounded-full border bg-background shadow-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              aria-label="Gulir ke bawah"
+            >
+              <ChevronDown className="h-4 w-4" aria-hidden={true} />
+            </button>
+          )}
+
+          {/* Error bar with retry */}
           {hasError && (
-            <div className="border-t bg-destructive/10 px-4 py-1.5 text-xs text-destructive">
-              Gagal mengirim pesan. Silakan coba lagi.
+            <div className="flex items-center justify-between gap-2 border-t bg-destructive/10 px-4 py-2 text-xs text-destructive">
+              <span>Gagal mengirim. Coba lagi?</span>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="flex items-center gap-1 rounded-lg border border-destructive/30 px-2 py-1 transition-colors hover:bg-destructive/10"
+                aria-label="Coba lagi"
+              >
+                <RefreshCw className="h-3 w-3" aria-hidden={true} />
+                Coba lagi
+              </button>
             </div>
           )}
 
