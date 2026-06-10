@@ -31,10 +31,10 @@ export function useDialogFocusTrap(onClose: () => void) {
 
       if (event.key !== "Tab") return;
 
-      const focusable = getFocusableElements(dialog);
+      const focusable = getFocusableElements(dialog!);
       if (focusable.length === 0) {
         event.preventDefault();
-        dialog.focus();
+        dialog!.focus();
         return;
       }
 

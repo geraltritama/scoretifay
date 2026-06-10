@@ -17,6 +17,11 @@ dist-ssr
 *.local
 .lovable
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Wrangler / Cloudflaredsad
 .wrangler/
 .dev.vars
