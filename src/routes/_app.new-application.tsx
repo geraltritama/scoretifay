@@ -87,10 +87,33 @@ function NewApplication() {
     if (idx < STEP_ORDER.length - 1) {
       setStep(STEP_ORDER[idx + 1]);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      navigate({ to: "/my-applications" });
+      return;
     }
+
+    // Final step: compute scores per C, then total
+    const scores = {} as Record<StepKey, number>;
+    for (const key of STEP_ORDER) {
+      const stepFields = FIELDS[key].fields;
+      const perField = stepFields.map((f) => scoreField(values[f.label] ?? "", f.options));
+      const avg = perField.reduce((a, b) => a + b, 0) / perField.length;
+      scores[key] = Math.round(avg);
+    }
+    const totalScore = Math.round(
+      STEP_ORDER.reduce((sum, k) => sum + scores[k], 0) / STEP_ORDER.length,
+    );
+
+    saveApplication({
+      id: `APP-${Date.now()}`,
+      submittedAt: new Date().toISOString(),
+      values,
+      scores,
+      totalScore,
+      decision: decisionFromScore(totalScore),
+    });
+
+    navigate({ to: "/my-applications" });
   };
+
 
   return (
     <StepCard
