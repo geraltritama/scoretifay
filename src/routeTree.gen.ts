@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppNewApplicationRouteImport } from './routes/_app.new-application'
 import { Route as AppMyApplicationsRouteImport } from './routes/_app.my-applications'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppNewApplicationRoute = AppNewApplicationRouteImport.update({
   id: '/new-application',
@@ -38,11 +44,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/my-applications': typeof AppMyApplicationsRoute
   '/new-application': typeof AppNewApplicationRoute
+  '/settings': typeof AppSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/my-applications': typeof AppMyApplicationsRoute
   '/new-application': typeof AppNewApplicationRoute
+  '/settings': typeof AppSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,18 +58,20 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_app/my-applications': typeof AppMyApplicationsRoute
   '/_app/new-application': typeof AppNewApplicationRoute
+  '/_app/settings': typeof AppSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/my-applications' | '/new-application'
+  fullPaths: '/' | '/my-applications' | '/new-application' | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/my-applications' | '/new-application'
+  to: '/' | '/my-applications' | '/new-application' | '/settings'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/_app/my-applications'
     | '/_app/new-application'
+    | '/_app/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -85,6 +95,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/new-application': {
       id: '/_app/new-application'
       path: '/new-application'
@@ -105,11 +122,13 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppMyApplicationsRoute: typeof AppMyApplicationsRoute
   AppNewApplicationRoute: typeof AppNewApplicationRoute
+  AppSettingsRoute: typeof AppSettingsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppMyApplicationsRoute: AppMyApplicationsRoute,
   AppNewApplicationRoute: AppNewApplicationRoute,
+  AppSettingsRoute: AppSettingsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
