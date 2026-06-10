@@ -81,6 +81,7 @@ function NewApplication() {
   const navigate = useNavigate();
   const [step, setStep] = useState<StepKey>("character");
   const [values, setValues] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<Application | null>(null);
 
   const config = FIELDS[step];
 
@@ -92,7 +93,6 @@ function NewApplication() {
       return;
     }
 
-    // Final step: compute scores per C, then total
     const scores = {} as Record<StepKey, number>;
     for (const key of STEP_ORDER) {
       const stepFields = FIELDS[key].fields;
@@ -104,36 +104,122 @@ function NewApplication() {
       STEP_ORDER.reduce((sum, k) => sum + scores[k], 0) / STEP_ORDER.length,
     );
 
-    saveApplication({
+    const app: Application = {
       id: `APP-${Date.now()}`,
       submittedAt: new Date().toISOString(),
       values,
       scores,
       totalScore,
       decision: decisionFromScore(totalScore),
-    });
-
-    navigate({ to: "/my-applications" });
+    };
+    saveApplication(app);
+    setResult(app);
   };
 
-
   return (
-    <StepCard
-      current={step}
-      title={config.title}
-      subtitle={config.subtitle}
-      onSubmit={handleSubmit}
-    >
-      {config.fields.map((f) => (
-        <SelectField
-          key={f.label}
-          label={f.label}
-          placeholder={f.placeholder}
-          options={f.options}
-          value={values[f.label] ?? ""}
-          onChange={(v) => setValues((s) => ({ ...s, [f.label]: v }))}
+    <>
+      <StepCard
+        current={step}
+        title={config.title}
+        subtitle={config.subtitle}
+        onSubmit={handleSubmit}
+      >
+        {config.fields.map((f) => (
+          <SelectField
+            key={f.label}
+            label={f.label}
+            placeholder={f.placeholder}
+            options={f.options}
+            value={values[f.label] ?? ""}
+            onChange={(v) => setValues((s) => ({ ...s, [f.label]: v }))}
+          />
+        ))}
+      </StepCard>
+
+      {result && (
+        <ResultModal
+          app={result}
+          onViewAll={() => navigate({ to: "/my-applications" })}
+          onClose={() => {
+            setResult(null);
+            setValues({});
+            setStep("character");
+          }}
         />
-      ))}
-    </StepCard>
+      )}
+    </>
   );
 }
+
+const DECISION_STYLE: Record<Application["decision"], { bg: string; label: string }> = {
+  Approved: { bg: "bg-emerald-600", label: "Approved" },
+  Review: { bg: "bg-amber-500", label: "Needs Review" },
+  Rejected: { bg: "bg-red-600", label: "Rejected" },
+};
+
+function ResultModal({
+  app,
+  onViewAll,
+  onClose,
+}: {
+  app: Application;
+  onViewAll: () => void;
+  onClose: () => void;
+}) {
+  const style = DECISION_STYLE[app.decision];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-2xl">
+        <div className="mb-5 flex items-start justify-between">
+          <h2 className="text-2xl font-bold">Your Assessment Result</h2>
+          <button onClick={onClose} className="rounded-md p-1 hover:bg-secondary">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mb-4 rounded-lg border bg-secondary/50 p-4 text-center">
+          <div className="text-sm text-muted-foreground">Total Credit Score</div>
+          <div className="mt-1 text-4xl font-bold">
+            {app.totalScore}
+            <span className="text-lg font-medium text-muted-foreground"> / 100</span>
+          </div>
+        </div>
+
+        <div className={`mb-5 flex items-center gap-3 rounded-lg px-4 py-3 text-white ${style.bg}`}>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+            <Check className="h-5 w-5" />
+          </div>
+          <div className="font-semibold">{style.label}</div>
+        </div>
+
+        <div className="mb-6 rounded-lg border bg-secondary/40 p-4">
+          <h3 className="mb-3 font-semibold">Score Breakdown</h3>
+          <div className="space-y-2 text-sm">
+            {STEP_ORDER.map((k) => (
+              <div key={k} className="flex items-center justify-between">
+                <span className="capitalize text-muted-foreground">{k}</span>
+                <span className="font-semibold">{app.scores[k]} / 100</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={onViewAll}
+            className="rounded-md border border-input bg-background px-4 py-2.5 text-sm font-semibold hover:bg-secondary"
+          >
+            View My Applications
+          </button>
+          <button
+            onClick={onClose}
+            className="rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
