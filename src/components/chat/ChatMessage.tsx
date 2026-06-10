@@ -1,5 +1,6 @@
 import { Bot, User } from "lucide-react";
 import type { UIMessage } from "ai";
+import ReactMarkdown from "react-markdown";
 
 interface ChatMessageProps {
   message: UIMessage;
@@ -33,10 +34,42 @@ export function ChatMessage({ message, compact = false }: ChatMessageProps) {
       >
         {message.parts.map((part, i) => {
           if (part.type === "text") {
+            if (isUser) {
+              return (
+                <span key={`${message.id}-${i}`} className="whitespace-pre-wrap">
+                  {part.text}
+                </span>
+              );
+            }
             return (
-              <span key={`${message.id}-${i}`} className="whitespace-pre-wrap">
-                {part.text}
-              </span>
+              <div key={`${message.id}-${i}`} className="prose-chat">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                    strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                    em: ({ children }) => <em className="italic">{children}</em>,
+                    ul: ({ children }) => <ul className="mb-1.5 ml-3 list-disc space-y-0.5">{children}</ul>,
+                    ol: ({ children }) => <ol className="mb-1.5 ml-3 list-decimal space-y-0.5">{children}</ol>,
+                    li: ({ children }) => <li>{children}</li>,
+                    h1: ({ children }) => <p className="mb-1 font-bold">{children}</p>,
+                    h2: ({ children }) => <p className="mb-1 font-semibold">{children}</p>,
+                    h3: ({ children }) => <p className="mb-1 font-semibold">{children}</p>,
+                    code: ({ children }) => (
+                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]">
+                        {children}
+                      </code>
+                    ),
+                    pre: ({ children }) => <div className="my-1">{children}</div>,
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-2 border-emerald-600 pl-2 italic text-muted-foreground">
+                        {children}
+                      </blockquote>
+                    ),
+                  }}
+                >
+                  {part.text}
+                </ReactMarkdown>
+              </div>
             );
           }
           return null;
