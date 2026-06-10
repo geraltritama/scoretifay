@@ -1,7 +1,7 @@
 export const CHAT_CONFIG = {
   maxInputLength: 500,
   maxMessagesInContext: 50,
-  modelId: "gemini-2.0-flash",
+  modelId: "gemini-2.5-flash",
 } as const;
 
 export const SYSTEM_PROMPT = `Kamu adalah Scoretifay Assistant, asisten AI untuk platform penilaian kredit Scoretifay berbasis framework 5C.
